@@ -1,31 +1,21 @@
 #ifndef ESP_MQTT_CLIENT_H
 #define ESP_MQTT_CLIENT_H
 
-#include <ArduinoOTA.h>
 #include <PubSubClient.h>
 #include <vector>
 
 #ifdef ESP8266
 
   #include <ESP8266WiFi.h>
-  #include <ESP8266WebServer.h>
-  #include <ESP8266mDNS.h>
-  #include <ESP8266HTTPUpdateServer.h>
 
   #define DEFAULT_MQTT_CLIENT_NAME "ESP8266"
-  #define ESPHTTPUpdateServer ESP8266HTTPUpdateServer
-  #define ESPmDNS ESP8266mDNS
-  #define WebServer ESP8266WebServer
 
 #else // for ESP32
 
   #include <WiFiClient.h>
   #include <WebServer.h>
-  #include <ESPmDNS.h>
-  #include "ESP32HTTPUpdateServer.h"
 
   #define DEFAULT_MQTT_CLIENT_NAME "ESP32"
-  #define ESPHTTPUpdateServer ESP32HTTPUpdateServer
 
 #endif
 
@@ -73,14 +63,6 @@ private:
     MessageReceivedCallbackWithTopic callbackWithTopic;
   };
   std::vector<TopicSubscriptionRecord> _topicSubscriptionList;
-
-  // HTTP/OTA update related
-  char* _updateServerAddress;
-  char* _updateServerUsername;
-  char* _updateServerPassword;
-  WebServer* _httpServer;
-  ESPHTTPUpdateServer* _httpUpdater;
-  bool _enableOTA;
 
   // Delayed execution related
   struct DelayedExecutionRecord {
@@ -137,9 +119,6 @@ public:
 
   // Optional functionality
   void enableDebuggingMessages(const bool enabled = true); // Allow to display useful debugging messages. Can be set to false to disable them during program execution
-  void enableHTTPWebUpdater(const char* username, const char* password, const char* address = "/"); // Activate the web updater, must be set before the first loop() call.
-  void enableHTTPWebUpdater(const char* address = "/"); // Will set user and password equal to _mqttUsername and _mqttPassword
-  void enableOTA(const char *password = NULL, const uint16_t port = 0); // Activate OTA updater, must be set before the first loop() call.
   void enableMQTTPersistence(); // Tell the broker to establish a persistent connection. Disabled by default. Must be called before the first loop() execution
   void enableLastWillMessage(const char* topic, const char* message, const bool retain = false); // Must be set before the first loop() call.
   void enableDrasticResetOnConnectionFailures() {_drasticResetOnConnectionFailures = true;} // Can be usefull in special cases where the ESP board hang and need resetting (#59)
