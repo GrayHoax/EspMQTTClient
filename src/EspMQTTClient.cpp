@@ -77,12 +77,6 @@ EspMQTTClient::EspMQTTClient(
   _mqttClient.setCallback([this](char* topic, uint8_t* payload, unsigned int length) {this->mqttMessageReceivedCallback(topic, payload, length);});
   _failedMQTTConnectionAttemptCount = 0;
 
-  // HTTP/OTA update related
-  _updateServerAddress = NULL;
-  _httpServer = NULL;
-  _httpUpdater = NULL;
-  _enableOTA = false;
-
   // other
   _enableDebugMessages = false;
   _drasticResetOnConnectionFailures = false;
@@ -104,44 +98,6 @@ EspMQTTClient::~EspMQTTClient()
 void EspMQTTClient::enableDebuggingMessages(const bool enabled)
 {
   _enableDebugMessages = enabled;
-}
-
-void EspMQTTClient::enableHTTPWebUpdater(const char* username, const char* password, const char* address)
-{
-  if (_httpServer == NULL)
-  {
-    _httpServer = new WebServer(80);
-    _httpUpdater = new ESPHTTPUpdateServer(_enableDebugMessages);
-    _updateServerUsername = (char*)username;
-    _updateServerPassword = (char*)password;
-    _updateServerAddress = (char*)address;
-  }
-  else if (_enableDebugMessages)
-    Serial.print("SYS! You can't call enableHTTPWebUpdater() more than once !\n");
-}
-
-void EspMQTTClient::enableHTTPWebUpdater(const char* address)
-{
-  if(_mqttUsername == NULL || _mqttPassword == NULL)
-    enableHTTPWebUpdater("", "", address);
-  else
-    enableHTTPWebUpdater(_mqttUsername, _mqttPassword, address);
-}
-
-void EspMQTTClient::enableOTA(const char *password, const uint16_t port)
-{
-  _enableOTA = true;
-
-  if (_mqttClientName != NULL)
-    ArduinoOTA.setHostname(_mqttClientName);
-
-  if (password != NULL)
-    ArduinoOTA.setPassword(password);
-  else if (_mqttPassword != NULL)
-    ArduinoOTA.setPassword(_mqttPassword);
-
-  if (port)
-    ArduinoOTA.setPort(port);
 }
 
 void EspMQTTClient::enableMQTTPersistence()
@@ -216,7 +172,6 @@ bool EspMQTTClient::handleWiFi()
           Serial.printf("WiFi! Connection attempt failed, delay expired. (%fs). \n", millis()/1000.0);
 
         WiFi.disconnect(true);
-        MDNS.end();
 
         _nextWifiConnectionAttemptMillis = millis() + 500;
         _connectingToWifi = false;
@@ -235,17 +190,7 @@ bool EspMQTTClient::handleWiFi()
   // Connected since at least one loop() call
   else if (isWifiConnected && _wifiConnected)
   {
-    // Web updater handling
-    if (_httpServer != NULL)
-    {
-      _httpServer->handleClient();
-      #ifdef ESP8266
-        MDNS.update(); // We need to do this only for ESP8266
-      #endif
-    }
-
-    if (_enableOTA)
-      ArduinoOTA.handle();
+    
   }
 
   // Disconnected since at least one loop() call
@@ -321,7 +266,6 @@ bool EspMQTTClient::handleMQTT()
           Serial.println("MQTT!: Can't connect to broker after too many attempt, resetting WiFi ...");
 
         WiFi.disconnect(true);
-        MDNS.end();
         _nextWifiConnectionAttemptMillis = millis() + 500;
 
         if(!_drasticResetOnConnectionFailures)
@@ -358,21 +302,6 @@ void EspMQTTClient::onWiFiConnectionEstablished()
 {
     if (_enableDebugMessages)
       Serial.printf("WiFi: Connected (%fs), ip : %s \n", millis()/1000.0, WiFi.localIP().toString().c_str());
-
-    // Config of web updater
-    if (_httpServer != NULL)
-    {
-      MDNS.begin(_mqttClientName);
-      _httpUpdater->setup(_httpServer, _updateServerAddress, _updateServerUsername, _updateServerPassword);
-      _httpServer->begin();
-      MDNS.addService("http", "tcp", 80);
-
-      if (_enableDebugMessages)
-        Serial.printf("WEB: Updater ready, open http://%s.local in your browser and login with username '%s' and password '%s'.\n", _mqttClientName, _updateServerUsername, _updateServerPassword);
-    }
-
-    if (_enableOTA)
-      ArduinoOTA.begin();
 }
 
 void EspMQTTClient::onWiFiConnectionLost()
@@ -384,7 +313,6 @@ void EspMQTTClient::onWiFiConnectionLost()
   if (_handleWiFi)
   {
     WiFi.disconnect(true);
-    MDNS.end();
   }
 }
 
