@@ -84,14 +84,6 @@ EspMQTTClient::EspMQTTClient(
   _connectionEstablishedCount = 0;
 }
 
-EspMQTTClient::~EspMQTTClient()
-{
-  if (_httpServer != NULL)
-    delete _httpServer;
-  if (_httpUpdater != NULL)
-    delete _httpUpdater;
-}
-
 
 // =============== Configuration functions, most of them must be called before the first loop() call ==============
 
@@ -265,7 +257,7 @@ bool EspMQTTClient::handleMQTT()
         if (_enableDebugMessages)
           Serial.println("MQTT!: Can't connect to broker after too many attempt, resetting WiFi ...");
 
-        WiFi.disconnect(true);
+//        WiFi.disconnect(true);
         _nextWifiConnectionAttemptMillis = millis() + 500;
 
         if(!_drasticResetOnConnectionFailures)
